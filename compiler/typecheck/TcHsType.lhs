@@ -166,24 +166,23 @@ tcHsInstHead (L loc hs_ty)
                         -- because that comes from the caller
     kc_ds_inst_head hs_ty
   where
-    kc_ds_inst_head ty = case splitHsForAllTy_maybe ty of
-        (tv_names, ctxt, cls_ty)
-          | Just _ <- splitHsClassTy_maybe cls_ty
-          -> do -- Kind-checking first
-                (tvs, ctxt, cls_ty) <- kcHsTyVars tv_names $ \ tv_names' -> do
-                  ctxt' <- mapM kcHsLPredType ctxt
-                  cls_ty' <- kc_check_hs_type cls_ty ekFact
-                     -- The body of a forall is usually lifted, but in an instance
-                     -- head we only allow something of kind Fact.
-                  return (tv_names', ctxt', cls_ty')
-                -- Now desugar the kind-checked type
-                let Just (cls_name, tys) = splitHsClassTy_maybe cls_ty
-                tcTyVarBndrs tvs  $ \ tvs' -> do
-                  ctxt' <- dsHsTypes ctxt
-                  clas <- tcLookupClass cls_name
-                  tys' <- dsHsTypes tys
-                  return (tvs', ctxt', clas, tys')
+    kc_ds_inst_head ty = case splitHsClassTy_maybe cls_ty of
+        Just _ -> do -- Kind-checking first
+          (tvs, ctxt, cls_ty) <- kcHsTyVars tv_names $ \ tv_names' -> do
+            ctxt' <- mapM kcHsLPredType ctxt
+            cls_ty' <- kc_check_hs_type cls_ty ekFact
+               -- The body of a forall is usually lifted, but in an instance
+               -- head we only allow something of kind Fact.
+            return (tv_names', ctxt', cls_ty')
+          -- Now desugar the kind-checked type
+          let Just (cls_name, tys) = splitHsClassTy_maybe cls_ty
+          tcTyVarBndrs tvs  $ \ tvs' -> do
+            ctxt' <- dsHsTypes ctxt
+            clas <- tcLookupClass cls_name
+            tys' <- dsHsTypes tys
+            return (tvs', ctxt', clas, tys')
         _ -> failWithTc (ptext (sLit "Malformed instance type"))
+      where (tv_names, ctxt, cls_ty) = splitHsForAllTy ty
 
 tcHsQuantifiedType :: [LHsTyVarBndr Name] -> LHsType Name -> TcM ([TyVar], Type)
 -- Behave very like type-checking (HsForAllTy sig_tvs hs_ty),

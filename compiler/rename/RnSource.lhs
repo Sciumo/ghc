@@ -425,7 +425,7 @@ rnSrcInstDecl (InstDecl inst_ty mbinds uprags ats)
 	-- Rename the bindings
 	-- The typechecker (not the renamer) checks that all 
 	-- the bindings are for the right class
-        ; let Just (inst_tyvars, _, L _ cls,_) = splitHsInstDeclTy_maybe inst_ty'
+        ; let Just (inst_tyvars, _, L _ cls,_) = splitLHsInstDeclTy_maybe inst_ty'
 
         ; (mbinds', meth_fvs) <- extendTyVarEnvForMethodBinds inst_tyvars $
 				rnMethodBinds cls (\_ -> []) 	-- No scoped tyvars

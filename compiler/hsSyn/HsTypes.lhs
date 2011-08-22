@@ -24,7 +24,10 @@ module HsTypes (
 	hsTyVarName, hsTyVarNames, replaceTyVarName,
 	hsTyVarKind, hsTyVarNameKind,
 	hsLTyVarName, hsLTyVarNames, hsLTyVarLocName, hsLTyVarLocNames,
-	splitHsInstDeclTy_maybe, splitHsForAllTy_maybe, splitHsClassTy_maybe, splitHsFunType,
+	splitHsInstDeclTy_maybe, splitLHsInstDeclTy_maybe,
+        splitHsForAllTy, splitLHsForAllTy,
+        splitHsClassTy_maybe, splitLHsClassTy_maybe,
+        splitHsFunType,
 	splitHsAppTys, mkHsAppTys,
 	
 	-- Type place holder
@@ -218,7 +221,7 @@ mkHsForAllTy exp tvs ctxt ty = HsForAllTy exp tvs ctxt ty
 mk_forall_ty :: HsExplicitFlag -> [LHsTyVarBndr name] -> LHsType name -> HsType name
 mk_forall_ty exp  tvs  (L _ (HsParTy ty))		    = mk_forall_ty exp tvs ty
 mk_forall_ty exp1 tvs1 (L _ (HsForAllTy exp2 tvs2 ctxt ty)) = mkHsForAllTy (exp1 `plus` exp2) (tvs1 ++ tvs2) ctxt ty
-mk_forall_ty exp  tvs  ty			            = HsForAllTy exp tvs (L noSrcSpan []) ty
+mk_forall_ty exp  tvs  ty			            = HsForAllTy exp tvs (noLoc []) ty
 	-- Even if tvs is empty, we still make a HsForAll!
 	-- In the Implicit case, this signals the place to do implicit quantification
 	-- In the Explicit case, it prevents implicit quantification	
@@ -297,44 +300,53 @@ mkHsAppTys fun_ty (arg_ty:arg_tys)
        -- Add noLocs for inner nodes of the application; 
        -- they are never used 
 
-splitHsInstDeclTy_maybe
-    :: OutputableBndr name
-    => LHsType name 
+splitHsInstDeclTy_maybe :: HsType name 
+                        -> Maybe ([LHsTyVarBndr name], HsContext name, name, [LHsType name])
+splitHsInstDeclTy_maybe ty
+  = fmap (\(tvs, cxt, L _ n, tys) -> (tvs, cxt, n, tys)) $ splitLHsInstDeclTy_maybe (noLoc ty)
+
+splitLHsInstDeclTy_maybe
+    :: LHsType name 
     -> Maybe ([LHsTyVarBndr name], HsContext name, Located name, [LHsType name])
 	-- Split up an instance decl type, returning the pieces
-splitHsInstDeclTy_maybe inst_ty) = do
-    let (tvs, cxt, ty) = splitHsForAllTy_maybe inst_ty
-    (cls, tys) <- splitHsClassTy_maybe ty
+splitLHsInstDeclTy_maybe inst_ty = do
+    let (tvs, cxt, ty) = splitLHsForAllTy inst_ty
+    (cls, tys) <- splitLHsClassTy_maybe ty
     return (tvs, cxt, cls, tys)
 
-splitHsForAllTy_maybe
+splitHsForAllTy :: HsType name -> ([LHsTyVarBndr name], HsContext name, HsType name)
+splitHsForAllTy ty = case splitLHsForAllTy (noLoc ty) of (tvs, cxt, L _ ty) -> (tvs, cxt, ty)
+
+splitLHsForAllTy
     :: LHsType name 
     -> ([LHsTyVarBndr name], HsContext name, LHsType name)
-splitHsForAllTy_maybe poly_ty
-  = case poly_ty of
-        HsParTy (L _ ty)              -> splitHsForAllTy_maybe ty
-        HsForAllTy _ tvs cxt (L _ ty) -> (tvs, unLoc cxt, ty)
-        other                         -> ([], [], other)
+splitLHsForAllTy poly_ty
+  = case unLoc poly_ty of
+        HsParTy ty              -> splitLHsForAllTy ty
+        HsForAllTy _ tvs cxt ty -> (tvs, unLoc cxt, ty)
+        _                       -> ([], [], poly_ty)
         -- The type vars should have been computed by now, even if they were implicit
 
-splitHsClassTy_maybe :: LHsType name -> Maybe (name, [LHsType name])
+splitHsClassTy_maybe :: HsType name -> Maybe (name, [LHsType name])
+splitHsClassTy_maybe ty = fmap (\(L _ n, tys) -> (n, tys)) $ splitLHsClassTy_maybe (noLoc ty)
+
+splitLHsClassTy_maybe :: LHsType name -> Maybe (Located name, [LHsType name])
 --- Watch out.. in ...deriving( Show )... we use this on 
 --- the list of partially applied predicates in the deriving,
 --- so there can be zero args.
 
 -- In TcDeriv we also use this to figure out what data type is being
 -- mentioned in a deriving (Generic (Foo bar baz)) declaration (i.e. "Foo").
-splitHsClassTy_maybe ty
+splitLHsClassTy_maybe ty
   = checkl ty []
   where
-    checkl (L l ty) args = fmap (\(t, args) -> (L l t, args)) $ check ty args
-
-    check (HsTyVar t)           args = Just (t, args)
-    check (HsAppTy l r)         args = checkl l (r:args)
-    check (HsOpTy l (L _ tc) r) args = check (HsTyVar tc) (l:r:args)
-    check (HsParTy t)           args = checkl t args
-    check (HsKindSig ty _)      args = checkl ty args
-    check _                     _    = Nothing
+    checkl (L l ty) args = case ty of
+        HsTyVar t      -> Just (L l t, args)
+        HsAppTy l r    -> checkl l (r:args)
+        HsOpTy l tc r  -> checkl (fmap HsTyVar tc) (l:r:args)
+        HsParTy t      -> checkl t args
+        HsKindSig ty _ -> checkl ty args
+        _              -> Nothing
 
 -- Splits HsType into the (init, last) parts
 -- Breaks up any parens in the result type: 

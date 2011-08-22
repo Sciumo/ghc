@@ -22,7 +22,6 @@ import GHC ( TyThing(..) )
 import DataCon
 import Id
 import TyCon
-import Class   ( classTyCon )
 import Coercion( pprCoAxiom )
 import HscTypes( tyThingParent_maybe )
 import TcType
@@ -168,7 +167,7 @@ pprTyCon pefas ss tyCon
       let rhs_type = GHC.synTyConType tyCon
       in hang (pprTyConHdr pefas tyCon <+> equals) 2 (pprTypeForUser pefas rhs_type)
   | Just cls <- GHC.tyConClass_maybe tyCon
-  = pprClass pefas show_me cls
+  = pprClass pefas ss cls
   | otherwise
   = pprAlgTyCon pefas ss tyCon
 

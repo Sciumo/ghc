@@ -129,7 +129,7 @@ import IdInfo		( IdDetails(..) )
 import Type             
 
 import Annotations
-import Class		( Class, classAllSelIds, classATs )
+import Class		( Class, classAllSelIds, classATs, classTyCon )
 import TyCon
 import DataCon		( DataCon, dataConImplicitIds, dataConWrapId, dataConTyCon )
 import PrelNames	( gHC_PRIM )
@@ -1133,11 +1133,11 @@ tyThingParent_maybe :: TyThing -> Maybe TyThing
 -- might have a parent.
 tyThingParent_maybe (ADataCon dc) = Just (ATyCon (dataConTyCon dc))
 tyThingParent_maybe (ATyCon tc)   = case tyConAssoc_maybe tc of
-                                      Just cls -> Just (AClass cls)
+                                      Just cls -> Just (ATyCon (classTyCon cls))
                                       Nothing  -> Nothing
 tyThingParent_maybe (AnId id)     = case idDetails id of
       				      	 RecSelId { sel_tycon = tc } -> Just (ATyCon tc)
-      				      	 ClassOpId cls               -> Just (AClass cls)
+      				      	 ClassOpId cls               -> Just (ATyCon (classTyCon cls))
                                       	 _other                      -> Nothing
 tyThingParent_maybe _other = Nothing
 \end{code}

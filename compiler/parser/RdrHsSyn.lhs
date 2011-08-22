@@ -471,9 +471,9 @@ checkInstType (L l t)
 	      	   return (L l (HsForAllTy Implicit [] (noLoc []) dict_ty))
 
 checkDictTy :: LHsType RdrName -> P (LHsType RdrName)
-checkDictTy (L spn ty) = case splitHsClassTy_maybe ty of
-    Nothing -> parseErrorSDoc spn (text "Malformed instance header:" <+> ppr ty)
-    Just _  -> return (L spn ty)
+checkDictTy lty@(L l ty) = case splitLHsClassTy_maybe lty of
+    Nothing -> parseErrorSDoc l (text "Malformed instance header:" <+> ppr ty)
+    Just _  -> return lty
 
 checkTParams :: Bool	  -- Type/data family
 	     -> [LHsType RdrName]

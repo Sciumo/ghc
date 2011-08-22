@@ -47,7 +47,6 @@ import HscTypes
 import Bag
 import DataCon
 import TyCon
-import Class
 import Id
 import Module
 import Outputable
