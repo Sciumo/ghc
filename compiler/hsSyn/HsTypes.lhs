@@ -299,25 +299,25 @@ mkHsAppTys fun_ty (arg_ty:arg_tys)
 
 splitHsInstDeclTy_maybe
     :: OutputableBndr name
-    => HsType name 
-    -> Maybe ([LHsTyVarBndr name], HsContext name, name, [LHsType name])
+    => LHsType name 
+    -> Maybe ([LHsTyVarBndr name], HsContext name, Located name, [LHsType name])
 	-- Split up an instance decl type, returning the pieces
-splitHsInstDeclTy_maybe inst_ty = do
+splitHsInstDeclTy_maybe inst_ty) = do
     let (tvs, cxt, ty) = splitHsForAllTy_maybe inst_ty
     (cls, tys) <- splitHsClassTy_maybe ty
     return (tvs, cxt, cls, tys)
 
 splitHsForAllTy_maybe
-    :: HsType name 
-    -> ([LHsTyVarBndr name], HsContext name, HsType name)
+    :: LHsType name 
+    -> ([LHsTyVarBndr name], HsContext name, LHsType name)
 splitHsForAllTy_maybe poly_ty
   = case poly_ty of
         HsParTy (L _ ty)              -> splitHsForAllTy_maybe ty
         HsForAllTy _ tvs cxt (L _ ty) -> (tvs, unLoc cxt, ty)
         other                         -> ([], [], other)
-    -- The type vars should have been computed by now, even if they were implicit
+        -- The type vars should have been computed by now, even if they were implicit
 
-splitHsClassTy_maybe :: HsType name -> Maybe (name, [LHsType name])
+splitHsClassTy_maybe :: LHsType name -> Maybe (name, [LHsType name])
 --- Watch out.. in ...deriving( Show )... we use this on 
 --- the list of partially applied predicates in the deriving,
 --- so there can be zero args.
@@ -325,9 +325,9 @@ splitHsClassTy_maybe :: HsType name -> Maybe (name, [LHsType name])
 -- In TcDeriv we also use this to figure out what data type is being
 -- mentioned in a deriving (Generic (Foo bar baz)) declaration (i.e. "Foo").
 splitHsClassTy_maybe ty
-  = check ty []
+  = checkl ty []
   where
-    checkl (L _ ty) args = check ty args
+    checkl (L l ty) args = fmap (\(t, args) -> (L l t, args)) $ check ty args
 
     check (HsTyVar t)           args = Just (t, args)
     check (HsAppTy l r)         args = checkl l (r:args)
