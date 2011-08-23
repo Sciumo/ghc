@@ -706,6 +706,15 @@ exprOkForSpeculation (Cast e _)  = exprOkForSpeculation e
 exprOkForSpeculation (Case e _ _ alts) 
   =  exprOkForSpeculation e  -- Note [exprOkForSpeculation: case expressions]
   && all (\(_,_,rhs) -> exprOkForSpeculation rhs) alts
+  && certainly_exhaustive
+  where
+    certainly_exhaustive = case alts of
+        ((DEFAULT, _, _):_)
+           -> True -- Remember that DEFAULT is always first (it it occurs at all)
+        ((DataAlt con, _, _):rest)
+           -> (1 + length rest) == length (tyConDataCons (dataConTyCon con))
+        _ -> False
+
 
 exprOkForSpeculation other_expr
   = case collectArgs other_expr of
@@ -781,6 +790,27 @@ If exprOkForSpeculation doesn't look through case expressions, you get this:
         }
 
 The inner case is redundant, and should be nuked.
+
+There is one wrinkle: inexhaustive case expressions should *not* be marked
+ok-for-speculation, because we might speculate them in a context where
+more DataCons can occur than the case is prepared to handle. An example that
+occurred in practice looked a bit like this:
+    zonkQuantifiedTyVar = \tv -> case tv of
+     TcTyVar {} -> ...
+     _ -> ... let foo = (case (case tv of Id _ _ n -> n; Var _ _ n -> n)
+                          of Name occ -> occ) ...
+
+Because (case tv of Id _ _ n -> n; Var _ _ n -> n) was marked ok-for-speculation,
+the float out pass floated the (case ... of Name occ -> occ) case out:
+    zonkQuantifiedTyVar = \tv -> case (case tv of Id _ _ n -> n; Var _ _ n -> n) of
+      Name occ -> case tv of
+        TcTyVar {} -> ...
+        _ -> ... let foo = occ ...
+
+This is definitely wrong because (case tv of Id _ _ n -> n; Var _ _ n -> n) was
+unprepared to handle the situatino where tv is a TcTyVar, since the case was floated
+from a branch where that was impossible.
+
 
 Note [dataToTag speculation]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
