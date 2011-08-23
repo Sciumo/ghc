@@ -1156,6 +1156,8 @@ check_pred_ty' dflags ctxt t@(TuplePred ts)
                  (predTupleErr (predTreePredType t) $$ how_to_allow)
        ; mapM_ (check_pred_ty' dflags ctxt) ts }
   where how_to_allow = parens (ptext (sLit "Use -XConstraintKind to permit this"))
+    -- This case will not normally be executed because without ConstraintKind
+    -- tuple types are only kind-checked as *
 
 check_pred_ty' dflags _ (IrredPred pred)
   = checkTc (xopt Opt_ConstraintKind dflags)
