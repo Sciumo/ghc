@@ -352,7 +352,11 @@ kc_hs_type (HsParTy ty) = do
    (ty', kind) <- kc_lhs_type ty
    return (HsParTy ty', kind)
 
-kc_hs_type (HsTyVar name) = do
+kc_hs_type (HsTyVar name)
+  -- Special case for the unit tycon so it benefits from kind overloading
+  | name == tyConName unitTyCon
+  = kc_hs_type (HsTupleTy (HsBoxyTuple placeHolderKind) [])
+  | otherwise = do
     kind <- kcTyVar name
     return (HsTyVar name, kind)
 
