@@ -8,7 +8,7 @@ module RnTypes (
 	-- Type related stuff
 	rnHsType, rnLHsType, rnLHsTypes, rnContext,
 	rnHsSigType, rnHsTypeFVs, rnConDeclFields,
-        rnIPName,
+        rnIPName, mkIPName,
 
 	-- Precence related stuff
 	mkOpAppRn, mkNegAppRn, mkOpFormRn, mkConOpPatRn,
@@ -257,10 +257,15 @@ rnContext' doc ctxt = mapM (rnLHsType doc) ctxt
 rnIPName :: IPName RdrName -> RnM (IPName Name)
 rnIPName n = do
     loc <- getSrcSpanM
-    -- We have a nice cheat here: the Unique we assign to the Name will just be
-    -- the Unique of the corresponding TyCon
-    let tc = ipTyCon (fmap rdrNameOcc n)
-    return $ IPName (mkInternalName (tyConUnique tc) (rdrNameOcc (ipNameName n)) loc)
+    return $ mkIPName loc (fmap rdrNameOcc n)
+
+-- We have a nice cheat here: the Unique we assign to the Name will just be
+-- the Unique of the corresponding TyCon
+--
+-- TODO: I'm not sure if we actually use this name except to get the OccName?
+mkIPName :: SrcSpan -> IPName OccName -> IPName Name
+mkIPName l n = IPName (mkInternalName (tyConUnique tc) (ipNameName n) l)
+  where tc = ipTyCon n
 \end{code}
 
 

@@ -169,7 +169,6 @@ import NameSet
 import VarEnv
 import PrelNames
 import TysWiredIn
-import TysPrim ( factKind )
 import BasicTypes
 import Util
 import Maybes

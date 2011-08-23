@@ -39,7 +39,7 @@ module Name (
 	-- ** Creating 'Name's
 	mkInternalName, mkSystemName, mkDerivedInternalName, 
 	mkSystemVarName, mkSysTvName, 
-	mkFCallName, mkIPName,
+	mkFCallName,
         mkTickBoxOpName,
 	mkExternalName, mkWiredInName,
 
@@ -297,14 +297,6 @@ mkTickBoxOpName :: Unique -> String -> Name
 mkTickBoxOpName uniq str 
    = Name { n_uniq = getKeyFastInt uniq, n_sort = Internal, 
 	    n_occ = mkVarOcc str, n_loc = noSrcSpan }
-
--- | Make the name of an implicit parameter
-mkIPName :: Unique -> OccName -> Name
-mkIPName uniq occ
-  = Name { n_uniq = getKeyFastInt uniq,
-	   n_sort = Internal,
-	   n_occ  = occ,
-	   n_loc = noSrcSpan }
 \end{code}
 
 \begin{code}

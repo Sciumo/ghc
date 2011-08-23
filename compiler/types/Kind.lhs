@@ -9,7 +9,7 @@ module Kind (
 
 	-- Kinds
 	liftedTypeKind, unliftedTypeKind, openTypeKind,
-        argTypeKind, ubxTupleKind,
+        argTypeKind, ubxTupleKind, factKind,
         mkArrowKind, mkArrowKinds,
 
         -- Kind constructors...
